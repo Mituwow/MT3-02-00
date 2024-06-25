@@ -437,7 +437,7 @@ Matrix4x4 MakeViewportMatrix(float left, float top, float width, float height, f
 
 void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix) {
 	const float kGridHalfWidth = 2.0f;
-	const uint32_t kSubdivision = 11;
+	const uint32_t kSubdivision = 10;
 	const float kGridEvery = (kGridHalfWidth * 2.0f) / float(kSubdivision);
 
 	Vector3 gridLineStart[kSubdivision + 1] = {};
@@ -549,13 +549,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Matrix4x4 viewMatrix = Inverse(cameraMatrix);
 	Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
 	Matrix4x4 viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
+	Matrix4x4 viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
 
 	//グリッド
-	Vector3 gridScale = { 2.0f,2.0f,2.0f };
+	Vector3 gridScale = { 1.0f,1.0f,1.0f };
 	Vector3 gridRotate = { 0.0f,0.0f,0.0f };
 	Vector3 gridTranslate = { 0.0f,0.0f,0.0f };
-	Matrix4x4 gridWorldMatrix = MakeAffineMatrix(gridScale, gridRotate, gridTranslate);
-	Matrix4x4 gridWorldViewProjectionMatrix = Multiply(gridWorldMatrix, Multiply(viewMatrix, projectionMatrix));
+	Matrix4x4 gridViewProjectionMatrix = viewProjectionMatrix;
 
 	//球
 	Vector3 sphereScale = { 1.0f,1.0f,1.0f };
@@ -575,19 +575,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 closestPoint = ClosestPoint(point, segment);
 
 	Sphere pointSphere{ point,0.01f };
-	Matrix4x4 pointWorldMatrix = MakeAffineMatrix({ 1,1,1 }, { 0,0,0 }, point);
-	Matrix4x4 pointWorldViewProjectionMatrix = Multiply(pointWorldMatrix, Multiply(viewMatrix, projectionMatrix));
-
+	Matrix4x4 pointViewProjectionMatrix =  viewProjectionMatrix;
 	Sphere closestPointSphere{ closestPoint,0.01f };
-	Matrix4x4 closestPointWorldMatrix = MakeAffineMatrix({ 1,1,1 }, { 0,0,0 }, closestPoint);
-	Matrix4x4 closestPointWorldViewProjectionMatrix = Multiply(closestPointWorldMatrix, Multiply(viewMatrix, projectionMatrix));
-
-	Matrix4x4 segmentOriginWorldMatrix = MakeAffineMatrix({ 1,1,1 }, { 0,0,0 }, segment.origin);
-	Matrix4x4 segmentOriginWorldViewProjectionMatrix = Multiply(segmentOriginWorldMatrix, Multiply(viewMatrix, projectionMatrix));
-	Matrix4x4 segmentDiffWorldMatrix = MakeAffineMatrix({ 1,1,1 }, { 0,0,0 }, segment.diff);
-	Matrix4x4 segmentDiffWorldViewProjectionMatrix = Multiply(segmentDiffWorldMatrix, Multiply(viewMatrix, projectionMatrix));
-	Vector3 start = Transform(Transform(segment.origin, segmentOriginWorldViewProjectionMatrix), viewportMatrix);
-	Vector3 end = Transform(Transform(Add(segment.origin,segment.diff), segmentDiffWorldViewProjectionMatrix),viewportMatrix);
+	Matrix4x4 closestPointViewProjectionMatrix =  viewProjectionMatrix;
+	Vector3 start = Transform(Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
+	Vector3 end = Transform(Transform(Add(segment.origin, segment.diff), viewProjectionMatrix), viewportMatrix);
 
 
 
@@ -609,28 +601,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		viewMatrix = Inverse(cameraMatrix);
 		projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kWindowWidth) / float(kWindowHeight), 0.1f, 100.0f);
 		viewportMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
+		viewProjectionMatrix = Multiply(viewMatrix, projectionMatrix);
 
-
-		gridWorldMatrix = MakeAffineMatrix(gridScale, gridRotate, gridTranslate);
-		gridWorldViewProjectionMatrix = Multiply(gridWorldMatrix, Multiply(viewMatrix, projectionMatrix));
+		gridViewProjectionMatrix = viewProjectionMatrix;
 
 		sphereWorldMatrix = MakeAffineMatrix(sphereScale, sphereRotate, sphereTranslate);
 		sphereWorldViewProjectionMatrix = Multiply(sphereWorldMatrix, Multiply(viewMatrix, projectionMatrix));
+				
+		pointViewProjectionMatrix = viewProjectionMatrix;
+		closestPointViewProjectionMatrix = viewProjectionMatrix;
 
-		pointWorldMatrix = MakeAffineMatrix({ 1,1,1 }, { 0,0,0 }, point);
-		pointWorldViewProjectionMatrix = Multiply(pointWorldMatrix, Multiply(viewMatrix, projectionMatrix));
-
-		closestPointWorldMatrix = MakeAffineMatrix({ 1,1,1 }, { 0,0,0 }, closestPoint);
-		closestPointWorldViewProjectionMatrix = Multiply(closestPointWorldMatrix, Multiply(viewMatrix, projectionMatrix));
-
-		segmentOriginWorldMatrix = MakeAffineMatrix({ 1,1,1 }, { 0,0,0 }, segment.origin);
-		segmentOriginWorldViewProjectionMatrix = Multiply(segmentOriginWorldMatrix, Multiply(viewMatrix, projectionMatrix));
-		segmentDiffWorldMatrix = MakeAffineMatrix({ 1,1,1 }, { 0,0,0 }, segment.diff);
-		segmentDiffWorldViewProjectionMatrix = Multiply(segmentDiffWorldMatrix, Multiply(viewMatrix, projectionMatrix));
-		start = Transform(Transform(segment.origin, segmentOriginWorldViewProjectionMatrix), viewportMatrix);
-		end = Transform(Transform(Add(segment.origin, segment.diff), segmentDiffWorldViewProjectionMatrix), viewportMatrix);
-
-
+		start = Transform(Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
+		end = Transform(Transform(Add(segment.origin, segment.diff), viewProjectionMatrix), viewportMatrix);
 
 		ImGui::Begin("Window");
 		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
@@ -639,7 +621,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat3("SphereRotate", &sphereRotate.x, 0.01f);
 		ImGui::DragFloat3("gridTranslate", &gridTranslate.x, 0.01f);
 		ImGui::DragFloat("SphereRadius", &sphere.radius, 0.01f);
-		ImGui::DragFloat3("project", &project.x,0.01f);
+		ImGui::DragFloat3("project", &project.x, 0.01f);
 
 		ImGui::End();
 
@@ -651,11 +633,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		DrawGrid(gridWorldViewProjectionMatrix, viewportMatrix);
+		DrawGrid(gridViewProjectionMatrix, viewportMatrix);
 		DrawSphere(sphere, sphereWorldViewProjectionMatrix, viewportMatrix, WHITE);
 
-		DrawSphere(pointSphere, pointWorldViewProjectionMatrix, viewportMatrix, RED);
-		DrawSphere(closestPointSphere, closestPointWorldViewProjectionMatrix, viewportMatrix, GREEN);
+		DrawSphere(pointSphere, pointViewProjectionMatrix, viewportMatrix, RED);
+		DrawSphere(closestPointSphere, closestPointViewProjectionMatrix, viewportMatrix, GREEN);
 		Novice::DrawLine(int(start.x), int(start.y), int(end.x), int(end.y), WHITE);
 
 		///
