@@ -530,9 +530,21 @@ Vector3 ClosestPoint(const Vector3& point, const Segment segment) {
 }
 */
 //02-01
+
 bool IsCollision(const Sphere& s1, const Sphere& s2) {
 
+	Vector3 v;
+	v = Subtract(s1.center, s2.center);
+
+	float length = v.x * v.x + v.y * v.y + v.z * v.z;
+	length = sqrtf(length);
+
+	if (length <= s1.radius + s2.radius) {
+		return true;
+	}
+	return false;
 }
+
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -563,8 +575,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//球
 	//02-01に限り配列にする
 	Vector3 sphereScale[2] = { { 1.0f,1.0f,1.0f }, {1.0f,1.0f,1.0f} };
-	Vector3 sphereRotate[2] = { {0.0f,0.0f,0.0f}, {0.0f,0.0f,0.0f} };
-	Vector3 sphereTranslate[2] = { {1.0f,1.0f,0.5f},{-1.0f,1.0f,0.5f} };
+	Vector3 sphereRotate[2] = { { 0.0f,0.0f,0.0f }, {0.0f,0.0f,0.0f} };
+	Vector3 sphereTranslate[2] = { {1.0f,1.0f,0.5f},{1.0f,1.0f,0.5f} };
 	Matrix4x4 sphereWorldMatrix[2] = {
 		{ MakeAffineMatrix(sphereScale[0], sphereRotate[0], sphereTranslate[0])},
 		{ MakeAffineMatrix(sphereScale[1], sphereRotate[1], sphereTranslate[1])} };
@@ -573,8 +585,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		{ Multiply(sphereWorldMatrix[1], viewProjectionMatrix)}
 	};
 	Sphere sphere[2] = {
-		{{0,0,0},0.5f} ,
-		{{0,0,0},0.5f }
+		{sphereTranslate[0],0.5f} ,
+		{sphereTranslate[1],0.5f} ,
 	};
 	unsigned int sphereColor[2] = { WHITE,WHITE };
 
@@ -630,6 +642,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		start = Transform(Transform(segment.origin, viewProjectionMatrix), viewportMatrix);
 		end = Transform(Transform(Add(segment.origin, segment.diff), viewProjectionMatrix), viewportMatrix);
 		*/
+
+		//02-01
+		if (IsCollision(sphere[0], sphere[1])) {
+			sphereColor[1] = RED;
+		}
+		else {
+			sphereColor[1] = WHITE;
+		}
+
+
 
 		ImGui::Begin("Window");
 
